@@ -1,0 +1,77 @@
+example<field>
+{
+name = "field of real numbers";
+
+infinite_characteristic;
+}
+
+example<commutative_ring>
+{
+name = "ring of integers";
+
+infinite_characteristic;
+Noetherian;
+~Artinian;
+}
+
+example<field>
+{
+name = "field of two elements"
+
+characteristic_2;
+set/two-element;
+}
+
+example<group>
+{
+name = "permutation group on three elements"
+
+~commutative;
+finite;
+~simple;
+}
+
+example<commutative_group>
+{
+name = "Klein four-group"
+
+~cyclic;
+finite;
+}
+
+example<commutative_group>
+{
+name = "trivial group"
+
+trivial;
+}
+
+example<commutative_monoid>
+{
+name = "a commutative monoid on two elements"
+description = "aa = a, ab = b, ba = b, bb = b"
+
+set/two-element;
+
+}
+
+example<semigroup>
+{
+name = "a semigroup on two elements"
+description = "aa = a, ab = a, ba = a, bb = a"
+
+set/two-element;
+commutative;
+~unital;
+
+}
+
+example<semigroup>
+{
+name = "a semigroup on two elements"
+description = "aa = a, ab = b, ba = a, bb = b"
+
+set/two-element;
+~commutative;
+~unital;
+}

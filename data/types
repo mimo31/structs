@@ -1,0 +1,69 @@
+type
+	set,
+	magma,
+	unital_magma,
+	semigroup,
+	monoid,
+	commutative_monoid,
+	group,
+	commutative_group,
+	ring,
+	commutative_ring,
+	field,
+	module,
+	vector_space;
+
+set magma.set;
+
+magma unital_magma.magma;
+set unital_magma.set = unital_magma.magma.set;
+
+magma semigroup.magma;
+set semigroup.set = semigroup.magma.set;
+
+unital_magma monoid.unital_magma;
+semigroup monoid.semigroup;
+monoid.unital_magma.magma = monoid.semigroup.magma;
+magma monoid.magma = monoid.unital_magma.magma;
+set monoid.set = monoid.magma.set;
+
+monoid commutative_monoid.monoid;
+unital_magma commutative_monoid.unital_magma = commutative_monoid.monoid.unital_magma;
+semigroup commutative_monoid.semigroup = commutative_monoid.monoid.semigroup;
+magma commutative_monoid.magma = commutative_monoid.monoid.magma;
+set commutative_monoid.set = commutative_monoid.magma.set;
+
+monoid group.monoid;
+unital_magma group.unital_magma = group.monoid.unital_magma;
+semigroup group.semigroup = group.monoid.semigroup;
+magma group.magma = group.monoid.magma;
+set group.set = group.monoid.set;
+
+group commutative_group.group;
+commutative_monoid commutative_group.commutative_monoid;
+commutative_group.group.monoid = commutative_group.commutative_monoid.monoid;
+unital_magma commutative_group.unital_magma = commutative_group.group.unital_magma;
+semigroup commutative_group.semigroup = commutative_group.group.semigroup;
+monoid commutative_group.monoid = commutative_group.group.monoid;
+magma commutative_group.magma = commutative_group.group.magma;
+set commutative_group.set = commutative_group.group.set;
+
+commutative_group ring.additive_group;
+monoid ring.multiplicative_monoid;
+ring.additive_group.set = ring.multiplicative_monoid.set;
+set ring.set = ring.additive_group.set;
+
+ring commutative_ring.ring;
+commutative_monoid commutative_ring.multiplicative_monoid;
+set commutative_ring.set = commutative_ring.ring.set;
+
+commutative_ring field.ring;
+commutative_group field.multiplicative_group;
+set field.set = field.ring.set;
+
+commutative_group module.additive_group;
+ring module.ring;
+
+module vector_space.module;
+field vector_space.field;
+vector_space.module.ring = vector_space.field.ring;
