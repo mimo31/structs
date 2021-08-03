@@ -22,6 +22,7 @@ enum class LexTokenType
 	ExclusiveOr,
 	Or,
 	And,
+	Comma,
 	Semic,
 	Identifier,
 	Literal,
@@ -36,11 +37,12 @@ struct LexToken
 {
 	LexTokenType type;
 	str content;
+	uint32_t lineNumber;
 
-	LexToken(const LexTokenType type) : type(type)
+	LexToken(const LexTokenType type, const uint32_t lineNumber) : type(type), lineNumber(lineNumber)
 	{}
 
-	LexToken(const LexTokenType type, const str& content) : type(type), content(content)
+	LexToken(const LexTokenType type, const str& content, const uint32_t lineNumber) : type(type), content(content), lineNumber(lineNumber)
 	{
 	}
 };
@@ -53,13 +55,15 @@ bool tokenize(vec<LexToken>& tokens, istream& defs, ostream& error)
 
 	vec<char> chars;
 	const str input(std::istreambuf_iterator<char>(defs), {});
+
+	uint64_t lineNumber = 1;
 	
 	bool insideLiteral = false;
 	vec<char> literalContent;
 	const auto submitLiteral = [&]
 	{
 		literalContent.push_back('\0');
-		tokens.push_back(LexToken(LexTokenType::Literal, str(&literalContent.front())));
+		tokens.push_back(LexToken(LexTokenType::Literal, str(&literalContent.front()), lineNumber));
 		insideLiteral = false;
 		literalContent.clear();
 	};
@@ -81,12 +85,10 @@ bool tokenize(vec<LexToken>& tokens, istream& defs, ostream& error)
 				tokenType = LexTokenType::KWName;
 			else if (id == "_description")
 				tokenType = LexTokenType::KWDescription;
-			tokens.push_back(tokenType == LexTokenType::Identifier ? LexToken(tokenType, id) : LexToken(tokenType));
+			tokens.push_back(tokenType == LexTokenType::Identifier ? LexToken(tokenType, id, lineNumber) : LexToken(tokenType, lineNumber));
 			identifierStart = -1;
 		}
 	};
-
-	uint64_t lineNumber = 1;
 
 	int64_t nwlScan = 0;
 	for (int64_t i = 0; i < input.length(); i++)
@@ -144,7 +146,7 @@ bool tokenize(vec<LexToken>& tokens, istream& defs, ostream& error)
 			if (i + 1 != input.length() && input[i] == c0 && input[i + 1] == c1)
 			{
 				endIdentifier(i);
-				tokens.push_back(LexToken(tokenType));
+				tokens.push_back(LexToken(tokenType, lineNumber));
 				i++;
 				return true;
 			}
@@ -154,17 +156,7 @@ bool tokenize(vec<LexToken>& tokens, istream& defs, ostream& error)
 			continue;
 		if (checkFor2CharOperator('-', '>', LexTokenType::PromotesTo))
 			continue;
-		const auto checkForOperator = [&](const char c, const LexTokenType tokenType)
-		{
-			if (input[i] == c)
-			{
-				endIdentifier(i);
-				tokens.push_back(LexToken(tokenType));
-				return true;
-			}
-			return false;
-		};
-		const unordered_map<char, LexTokenType> operators{
+		const umap<char, LexTokenType> operators{
 			{'<', LexTokenType::LAngleBra},
 			{'>', LexTokenType::RAngleBra},
 			{'=', LexTokenType::Equals},
@@ -178,13 +170,14 @@ bool tokenize(vec<LexToken>& tokens, istream& defs, ostream& error)
 			{'*', LexTokenType::ExclusiveOr},
 			{'|', LexTokenType::Or},
 			{'&', LexTokenType::And},
+			{',', LexTokenType::Comma},
 			{';', LexTokenType::Semic}
 		};
 
 		if (operators.find(input[i]) != operators.end())
 		{
 			endIdentifier(i);
-			tokens.push_back(LexToken(operators.at(input[i])));
+			tokens.push_back(LexToken(operators.at(input[i]), lineNumber));
 			continue;
 		}
 
@@ -218,15 +211,71 @@ bool tokenize(vec<LexToken>& tokens, istream& defs, ostream& error)
 	return failed;
 }
 
-bool parse(Universe& p, istream& defs, ostream& error)
+bool parse(Universe& universe, istream& defs, ostream& error)
 {
 	bool failed = true;
 
 	vec<LexToken> tokens;
 	failed |= tokenize(tokens, defs, error);
 
+	const auto addType = [&](const str& name, const uint32_t lineNumber)
+	{
+		if (universe.getType(name))
+			error << "Error @ line " << lineNumber << ": The type " << name << " has already been declared before." << endl;
+		else
+			universe.addType(name);
+	};
+
 	for (uint64_t i = 0; i < tokens.size(); i++)
 	{
-		
+		// deals with type declarations
+		if (tokens[i].type == LexTokenType::KWType)
+		{
+			if (i + 1 == tokens.size() || tokens[i + 1].type != LexTokenType::Identifier)
+			{
+				error << "Error @ line " << tokens[i + 1].lineNumber << ": Expected an identifier after a type keyword." << endl;
+				failed = true;
+				if (i + 1 != tokens.size())
+				{
+					i++;
+					continue;
+				}
+			}
+			i++;
+			addType(tokens[i].content, tokens[i].lineNumber);
+			i--;
+			while ((i += 2) + 1 < tokens.size())
+			{
+				if (tokens[i].type == LexTokenType::Semic)
+					break;
+				if (tokens[i].type != LexTokenType::Comma)
+				{
+					error << "Error @ line " << tokens[i].lineNumber << ": Expected a semicolon or a comma after an identifier." << endl;
+					failed = true;
+					break;
+				}
+				if (tokens[i + 1].type != LexTokenType::Identifier)
+				{
+					error << "Error @ line " << tokens[i + 1].lineNumber << ": Expected an identifier after a comma." << endl;
+					i++;
+					failed = true;
+					break;
+				}
+				addType(tokens[i + 1].content, tokens[i].lineNumber);
+			}
+			continue;
+		}
+
+		// TODO: deal with member declarations
+
+		// TODO: deal with member assignments
+
+		// TODO: deal with property declarations
+
+		// TODO: deal with property relationships
+
+		// TODO: deal with example declarations
 	}
+
+	return failed;
 }
