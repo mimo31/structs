@@ -9,6 +9,16 @@ typedef uint32_t MemberHandle;
 
 using std::pair;
 
+typedef vec<MemberHandle> DeepMemberHandle;
+
+typedef vec<PropertyHandle> DeepPropertyHandle;
+
+struct DeepProperty
+{
+	DeepPropertyHandle handle;
+	bool negated;
+};
+
 class StructType
 {
 public:
@@ -34,6 +44,15 @@ public:
 	str getMemberName(MemberHandle handle) const;
 	size_t getMemberCount() const;
 
+
+	// TODO: already (pre)compute the connected components when adding member or property equalities
+
+	void addMemberEquality(const DeepMemberHandle& handle0, const DeepMemberHandle& handle1);
+
+	// TODO: add methods for adding property equality and property relations
+
+
+
 private:
 	str name;
 
@@ -42,4 +61,12 @@ private:
 
 	vec<pair<str, const StructType*>> members;
 	umap<str, MemberHandle> memberMap;
+
+	// change the two containers below to already store the equality-connected components
+
+	vec<pair<DeepMemberHandle, DeepMemberHandle>> memberEqualities;
+
+	vec<pair<DeepPropertyHandle, DeepPropertyHandle>> propertyEqualities;
+
+	vec<vec<DeepProperty>> relations;
 };

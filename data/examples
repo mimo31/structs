@@ -1,13 +1,13 @@
 example<field>
 {
-name = "field of real numbers";
+_name = "field of real numbers";
 
 infinite_characteristic;
 }
 
 example<commutative_ring>
 {
-name = "ring of integers";
+_name = "ring of integers";
 
 infinite_characteristic;
 Noetherian;
@@ -16,7 +16,7 @@ Noetherian;
 
 example<field>
 {
-name = "field of two elements"
+_name = "field of two elements"
 
 characteristic_2;
 set/two-element;
@@ -24,7 +24,7 @@ set/two-element;
 
 example<group>
 {
-name = "permutation group on three elements"
+_name = "permutation group on three elements"
 
 ~commutative;
 finite;
@@ -33,7 +33,7 @@ finite;
 
 example<commutative_group>
 {
-name = "Klein four-group"
+_name = "Klein four-group"
 
 ~cyclic;
 finite;
@@ -41,15 +41,15 @@ finite;
 
 example<commutative_group>
 {
-name = "trivial group"
+_name = "trivial group"
 
 trivial;
 }
 
 example<commutative_monoid>
 {
-name = "a commutative monoid on two elements"
-description = "aa = a, ab = b, ba = b, bb = b"
+_name = "a commutative monoid on two elements"
+_description = "aa = a, ab = b, ba = b, bb = b"
 
 set/two-element;
 
@@ -57,8 +57,8 @@ set/two-element;
 
 example<semigroup>
 {
-name = "a semigroup on two elements"
-description = "aa = a, ab = a, ba = a, bb = a"
+_name = "a semigroup on two elements"
+_description = "aa = a, ab = a, ba = a, bb = a"
 
 set/two-element;
 commutative;
@@ -68,8 +68,8 @@ commutative;
 
 example<semigroup>
 {
-name = "a semigroup on two elements"
-description = "aa = a, ab = b, ba = a, bb = b"
+_name = "a semigroup on two elements"
+_description = "aa = a, ab = b, ba = a, bb = b"
 
 set/two-element;
 ~commutative;
