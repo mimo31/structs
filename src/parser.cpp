@@ -150,8 +150,8 @@ void tokenize(vec<LexToken>& tokens, istream& defs, ErrorReporter& er)
 		}
 	};
 
-	int64_t nwlScan = 0;
-	for (int64_t i = 0; i < input.length(); i++)
+	uint64_t nwlScan = 0;
+	for (uint64_t i = 0; i < input.length(); i++)
 	{
 		while (nwlScan < i)
 		{
@@ -273,7 +273,7 @@ public:
 
 	void addContent(uptr<SynBlock>&& newContent)
 	{
-		contents.push_back(newContent);
+		contents.push_back(std::move(newContent));
 	}
 
 	const vec<LexToken>& getTokens() const
@@ -525,7 +525,7 @@ void processMemberDeclaration(Universe& universe, StructType& type, const Identi
 	}
 }
 
-void processPropertyDeclaration(Universe& universe, StructType& type, const vec<Identifier>& propertyNames, ErrorReporter& er)
+void processPropertyDeclaration(StructType& type, const vec<Identifier>& propertyNames, ErrorReporter& er)
 {
 	for (const Identifier& propertyNameId : propertyNames)
 	{
@@ -609,6 +609,23 @@ PropertyRelations relationsOr(const vec<PropertyRelations>& relations)
 	return newRelations;
 }
 
+PropertyRelations relationsNegate(const PropertyRelations& relations)
+{
+	PropertyRelations negatedRelations;
+	for (const vec<DeepProperty>& orBlock : relations)
+	{
+		PropertyRelations partialRelations;
+		partialRelations.reserve(orBlock.size());
+		for (const DeepProperty& property : orBlock)
+		{
+			const DeepProperty negatedProperty(property.handle, !property.negated);
+			partialRelations.push_back({ negatedProperty });
+		}
+		negatedRelations = relationsOr(negatedRelations, partialRelations);
+	}
+	return negatedRelations;
+}
+
 PropertyRelations relationsExclusivity(const vec<PropertyRelations>& relations)
 {
 	if (relations.size() <= 1)
@@ -631,23 +648,6 @@ PropertyRelations relationsExclusivity(const vec<PropertyRelations>& relations)
 		newRelations = relationsOr(newRelations, andBlock);
 	}
 	return newRelations;
-}
-
-PropertyRelations relationsNegate(const PropertyRelations& relations)
-{
-	PropertyRelations negatedRelations;
-	for (const vec<DeepProperty>& orBlock : relations)
-	{
-		PropertyRelations partialRelations;
-		partialRelations.reserve(orBlock.size());
-		for (const DeepProperty& property : orBlock)
-		{
-			const DeepProperty negatedProperty(property.handle, !property.negated);
-			partialRelations.push_back({ negatedProperty });
-		}
-		negatedRelations = relationsOr(negatedRelations, partialRelations);
-	}
-	return negatedRelations;
 }
 
 PropertyRelations propertyExpressionToRelations(StructType& scopeType, const PropertyExpression& expression, ErrorReporter& er)
@@ -935,7 +935,8 @@ void parseTypeScope(Universe& universe, const SynBlock* scope, const Identifier&
 					nxt += 2;
 				}
 				nxt++;
-				declarators.push_back(MemberDeclarator(memberId, definitionIds));
+				if (!error)
+					declarators.push_back(MemberDeclarator(memberId, definitionIds));
 			}
 			processMemberDeclaration(universe, *scopeType, declaredType, declarators, er);
 			continue;
@@ -961,7 +962,7 @@ void parseTypeScope(Universe& universe, const SynBlock* scope, const Identifier&
 					er.reportSyn(tokens[nxt + 1], "Expected a comma.");
 				nxt += 2;
 			}
-			processPropertyDeclaration(universe, *scopeType, propertyIds, er);
+			processPropertyDeclaration(*scopeType, propertyIds, er);
 			continue;
 		}
 		if (tokens.size() == 3 && tokens[1].type == LexTokenType::PromotesTo)
@@ -1022,7 +1023,7 @@ void parseTypeScope(Universe& universe, const SynBlock* scope, const Identifier&
 	}
 }
 
-void parseExampleScope(Universe& universe, const SynBlock* scope, const Identifier& typeIdentifier, ErrorReporter& er)
+void parseExampleScope(Universe& /*universe*/, const SynBlock* /*scope*/, const Identifier& /*typeIdentifier*/, ErrorReporter& /*er*/)
 {
 	// TODO: implement
 }

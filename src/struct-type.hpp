@@ -40,8 +40,6 @@ public:
 	static constexpr PropertyHandle NoProperty = 0;
 	static constexpr MemberHandle NoMember = 0;
 
-	str name;
-
 	StructType(const str& name) : name(name)
 	{}
 
