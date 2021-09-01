@@ -13,10 +13,52 @@ type
 	module,
 	vector_space;
 
-set magma.set;
+set
+{
+property
+	empty,
+	singleton,
+	finite,
+	two-element,
+	finite,
+	infinte,
+	cardinality_omega,
+	cardinality_2^omega;
 
-magma unital_magma.magma;
-set unital_magma.set = unital_magma.magma.set;
+empty ! singleton ! two_element;
+empty => finite;
+singleton => finite;
+two_element => finite;
+cardinality_omega ! cardinality_2^omega;
+cardinality_omega => infinite;
+cardinality_2^omega => infinite;
+finite * infinite;
+}
+
+magma
+{
+set set;
+
+property
+	unital,
+	associative,
+	commutative;
+
+unital -> unital_magma;
+associative -> semigroup;
+}
+
+unital_magma
+{
+magma magma;
+set set = magma.set;
+
+property
+	associative,
+	commutative;
+
+associative -> monoid;
+}
 
 magma semigroup.magma;
 set semigroup.set = semigroup.magma.set;

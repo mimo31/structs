@@ -2,6 +2,7 @@
 
 #include "str.hpp"
 #include "umap.hpp"
+#include "vec.hpp"
 
 typedef uint32_t PropertyHandle;
 
@@ -11,19 +12,33 @@ using std::pair;
 
 typedef vec<MemberHandle> DeepMemberHandle;
 
-typedef vec<PropertyHandle> DeepPropertyHandle;
+struct DeepPropertyHandle
+{
+	vec<MemberHandle> memberPath;
+	PropertyHandle pHandle;
+};
 
 struct DeepProperty
 {
 	DeepPropertyHandle handle;
 	bool negated;
+
+	DeepProperty() = default;
+	DeepProperty(const DeepPropertyHandle& handle) : handle(handle), negated(false)
+	{
+	}
+	DeepProperty(const DeepPropertyHandle& handle, const bool negated) : handle(handle), negated(negated)
+	{
+	}
 };
+
+typedef vec<vec<DeepProperty>> PropertyRelations;
 
 class StructType
 {
 public:
-	static constexpr PropertyHandle noProperty = 0;
-	static constexpr MemberHandle noMember = 0;
+	static constexpr PropertyHandle NoProperty = 0;
+	static constexpr MemberHandle NoMember = 0;
 
 	str name;
 
@@ -44,14 +59,15 @@ public:
 	str getMemberName(MemberHandle handle) const;
 	size_t getMemberCount() const;
 
-
-	// TODO: already (pre)compute the connected components when adding member or property equalities
-
 	void addMemberEquality(const DeepMemberHandle& handle0, const DeepMemberHandle& handle1);
+	void addPropertyEquality(const DeepPropertyHandle& p0, const DeepPropertyHandle& p1);
+	void addPropertyRelations(const PropertyRelations& newRelations);
+	void addPromotion(PropertyHandle propertyHandle, const StructType* promoteTo);
 
-	// TODO: add methods for adding property equality and property relations
+	bool isNameUsed(const str& name) const;
 
-
+	// TODO: add a method for processing the added equalities and relations (to be called after the analysis of the sources)
+	// (probably building some union-find; and doing that for recursively from the lowest/simplest types)
 
 private:
 	str name;
@@ -62,11 +78,15 @@ private:
 	vec<pair<str, const StructType*>> members;
 	umap<str, MemberHandle> memberMap;
 
-	// change the two containers below to already store the equality-connected components
-
 	vec<pair<DeepMemberHandle, DeepMemberHandle>> memberEqualities;
 
 	vec<pair<DeepPropertyHandle, DeepPropertyHandle>> propertyEqualities;
 
-	vec<vec<DeepProperty>> relations;
+	// each relations says that the OR of the specified properties is true
+	PropertyRelations relations;
+
+	vec<pair<PropertyHandle, const StructType*>> promotions;
+
+	const StructType* getDeepMemberType(const DeepMemberHandle& handle);
+	bool checkDeepPropertyValid(const DeepPropertyHandle& handle);
 };
