@@ -57,54 +57,201 @@ property
 	commutative;
 
 associative -> monoid;
+
+~set.empty;
 }
 
-magma semigroup.magma;
-set semigroup.set = semigroup.magma.set;
+semigroup
+{
+magma magma;
+set set = magma.set;
 
-unital_magma monoid.unital_magma;
-semigroup monoid.semigroup;
-monoid.unital_magma.magma = monoid.semigroup.magma;
-magma monoid.magma = monoid.unital_magma.magma;
-set monoid.set = monoid.magma.set;
+property
+	unital,
+	commutative;
 
-monoid commutative_monoid.monoid;
-unital_magma commutative_monoid.unital_magma = commutative_monoid.monoid.unital_magma;
-semigroup commutative_monoid.semigroup = commutative_monoid.monoid.semigroup;
-magma commutative_monoid.magma = commutative_monoid.monoid.magma;
-set commutative_monoid.set = commutative_monoid.magma.set;
+unital -> monoid;
+}
 
-monoid group.monoid;
-unital_magma group.unital_magma = group.monoid.unital_magma;
-semigroup group.semigroup = group.monoid.semigroup;
-magma group.magma = group.monoid.magma;
-set group.set = group.monoid.set;
+monoid
+{
+unital_magma unital_magma;
+semigroup semigroup;
+unital_magma.magma = semigroup.magma;
+magma magma = unital_magma.magma;
+set set = magma.set;
 
-group commutative_group.group;
-commutative_monoid commutative_group.commutative_monoid;
-commutative_group.group.monoid = commutative_group.commutative_monoid.monoid;
-unital_magma commutative_group.unital_magma = commutative_group.group.unital_magma;
-semigroup commutative_group.semigroup = commutative_group.group.semigroup;
-monoid commutative_group.monoid = commutative_group.group.monoid;
-magma commutative_group.magma = commutative_group.group.magma;
-set commutative_group.set = commutative_group.group.set;
+property 
+	commutative;
 
-commutative_group ring.additive_group;
-monoid ring.multiplicative_monoid;
-ring.additive_group.set = ring.multiplicative_monoid.set;
-set ring.set = ring.additive_group.set;
+commutative -> commutative_monoid;
+}
 
-ring commutative_ring.ring;
-commutative_monoid commutative_ring.multiplicative_monoid;
-set commutative_ring.set = commutative_ring.ring.set;
+commutative_monoid
+{
+monoid monoid;
+unital_magma unital_magma = monoid.unital_magma;
+semigroup semigroup = monoid.semigroup;
+magma magma = monoid.magma;
+set set = magma.set;
+}
 
-commutative_ring field.ring;
-commutative_group field.multiplicative_group;
-set field.set = field.ring.set;
+group
+{
+monoid monoid;
+unital_magma unital_magma = monoid.unital_magma;
+semigroup semigroup = monoid.semigroup;
+magma magma = monoid.magma;
+set set = monoid.set;
 
-commutative_group module.additive_group;
-ring module.ring;
+property
+	simple,
+	commutative,
+	cyclic,
+	finite,
+	trivial;
 
-module vector_space.module;
-field vector_space.field;
-vector_space.module.ring = vector_space.field.ring;
+commutative -> commutative_group;
+
+finite = set.finite;
+trivial = set.singleton;
+cyclic => commutative;
+trivial => cyclic;
+trivial => ~simple;
+trivial => commutative;
+}
+
+commutative_group
+{
+group group;
+commutative_monoid commutative_monoid;
+group.monoid = commutative_monoid.monoid;
+unital_magma unital_magma = group.unital_magma;
+semigroup semigroup = group.semigroup;
+monoid monoid = group.monoid;
+magma magma = group.magma;
+set set = group.set;
+
+property
+	simple,
+	cyclic,
+	finite,
+	trivial;
+
+simple = group.simple;
+cyclic = group.cyclic;
+trivial = group.trivial;
+simple => cyclic;
+cyclic => (set.finite | set.cardinality_omega);
+finite = set.finite;
+}
+
+ring
+{
+commutative_group additive_group;
+monoid multiplicative_monoid;
+additive_group.set = multiplicative_monoid.set;
+set set = additive_group.set;
+
+property
+	commutative,
+	left-Artinian,
+	right-Artinian,
+	left-Noetherian,
+	right-Noetherian,
+	simple,
+	characteristic_2,
+	finite_characteristic,
+	infinite_characteristic;
+
+commutative -> commutative_ring;
+
+left-Artinian => left-Noetherian;
+right-Artinian => right-Noetherian;
+
+characteristic_2 => finite_characteristic;
+infinite_characteristic * finite_characteristic;
+
+infinite_characteristic => set.infinite;
+}
+
+commutative_ring
+{
+ring ring;
+commutative_group additive_group = ring.additive_group;
+commutative_monoid multiplicative_monoid;
+multiplicative_monoid.monoid = ring.multiplicative_monoid;
+set set = ring.set;
+
+property
+	Artinian,
+	Noetherian,
+	field,
+	characteristic_2,
+	finite_characteristic,
+	infinite_characteristic;
+
+Artinian = ring.left-Artinian = ring.right-Artinian;
+Noetherian = ring.left-Noetherian = ring.right-Noetherian;
+field = ring.simple;
+characteristic_2 = ring.characteristic_2;
+finite_characteristic = ring.finite_characteristic;
+infinite_characteristic = ring.infinite_characteristic;
+}
+
+field
+{
+commutative_ring ring;
+commutative_group additive_group = ring.additive_group;
+commutative_group multiplicative_group;
+set set = ring.set;
+
+property
+	characteristic_2,
+	finite_characteristic,
+	infinite_characteristic,
+	finite;
+
+characteristic_2 = ring.characteristic_2;
+finite_characteristic = ring.finite_characteristic;
+infinite_characteristic = ring.infinite_characteristic;
+additive_group.finite = multiplicative_group.finite;
+finite = multiplicative_group.finite;
+finite => multiplicative_group.simple;
+finite => finite_characteristic;
+additive_group.simple = additive_group.cyclic;
+additive_group.simple => finite;
+}
+
+module
+{
+commutative_group addtiive_group;
+ring ring;
+
+property
+	Artinian,
+	Noetherian,
+	simple,
+	finitely-generated,
+	cyclic;
+
+simple => Artinian;
+simple => Noetherian;
+simple => cyclic;
+cyclic => finitely-generated;
+Noetherian => finitely-generated;
+}
+
+vector_space
+{
+module module;
+field field;
+module.ring = field.ring;
+
+property
+	one-dimensional,
+	finite-dimensional;
+
+one-dimensional = module.simple;
+finite-dimensional = module.Artinian = module.Noetherian = module.finitely-generated;
+}
