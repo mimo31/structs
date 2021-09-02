@@ -240,7 +240,7 @@ void tokenize(vec<LexToken>& tokens, istream& defs, ErrorReporter& er)
 			continue;
 		}
 
-		if ((input[i] >= 'a' && input[i] <= 'z') || (input[i] >= 'A' && input[i] <= 'Z') || (input[i] >= '0' && input[i] <= '9') || input[i] == '-' || input[i] == '_')
+		if ((input[i] >= 'a' && input[i] <= 'z') || (input[i] >= 'A' && input[i] <= 'Z') || (input[i] >= '0' && input[i] <= '9') || input[i] == '-' || input[i] == '_' || input[i] == '^')
 		{
 			if (identifierStart == -1)
 				identifierStart = i;
