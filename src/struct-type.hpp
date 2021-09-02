@@ -54,6 +54,7 @@ public:
 	MemberHandle getMember(const str& name) const;
 	const StructType* getMemberType(const str& name) const;
 	const StructType* getMemberType(MemberHandle handle) const;
+	const StructType* getDeepMemberType(const DeepMemberHandle& handle) const;
 	str getMemberName(MemberHandle handle) const;
 	size_t getMemberCount() const;
 
@@ -85,6 +86,5 @@ private:
 
 	vec<pair<PropertyHandle, const StructType*>> promotions;
 
-	const StructType* getDeepMemberType(const DeepMemberHandle& handle);
 	bool checkDeepPropertyValid(const DeepPropertyHandle& handle);
 };

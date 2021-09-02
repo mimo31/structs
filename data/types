@@ -201,10 +201,11 @@ infinite_characteristic = ring.infinite_characteristic;
 
 field
 {
-commutative_ring ring;
-commutative_group additive_group = ring.additive_group;
+commutative_ring commutative_ring;
+ring ring = commutative_ring.ring;
+commutative_group additive_group = commutative_ring.additive_group;
 commutative_group multiplicative_group;
-set set = ring.set;
+set set = commutative_ring.set;
 
 property
 	characteristic_2,
@@ -212,9 +213,9 @@ property
 	infinite_characteristic,
 	finite;
 
-characteristic_2 = ring.characteristic_2;
-finite_characteristic = ring.finite_characteristic;
-infinite_characteristic = ring.infinite_characteristic;
+characteristic_2 = commutative_ring.characteristic_2;
+finite_characteristic = commutative_ring.finite_characteristic;
+infinite_characteristic = commutative_ring.infinite_characteristic;
 additive_group.finite = multiplicative_group.finite;
 finite = multiplicative_group.finite;
 finite => multiplicative_group.simple;

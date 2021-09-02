@@ -758,7 +758,14 @@ void processEquality(StructType& scopeType, const vec<PropertyExpression>& expre
 		{
 			const DeepMemberHandle currentMember = getDeepMemberHandle(scopeType, expressions[i].memberSequence, er);
 			if (!currentMember.empty())
-				scopeType.addMemberEquality(memberHandle, currentMember);
+			{
+				const StructType* const mType0 = scopeType.getDeepMemberType(memberHandle);
+				const StructType* const currentMType = scopeType.getDeepMemberType(currentMember);
+				if (mType0 == currentMType)
+					scopeType.addMemberEquality(memberHandle, currentMember);
+				else
+					er.reportSyn(expressions[i].lineNumber, "Can't assert equality of members with different types (" + mType0->getName() + " and " + currentMType->getName() + ").");
+			}
 		}
 	}
 }

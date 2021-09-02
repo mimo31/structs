@@ -115,7 +115,7 @@ bool StructType::isNameUsed(const str& name) const
 	return getMember(name) || getProperty(name);
 }
 
-const StructType* StructType::getDeepMemberType(const DeepMemberHandle& handle)
+const StructType* StructType::getDeepMemberType(const DeepMemberHandle& handle) const
 {
 	const StructType* type = this;
 	for (const MemberHandle& mHandle : handle)
