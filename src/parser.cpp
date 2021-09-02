@@ -772,7 +772,7 @@ void processExpressionDeclaration(StructType& scopeType, const PropertyExpressio
 PropertyExpression parsePropertyExpression(const vec<LexToken>& tokens, const uint32_t from, const uint32_t to, ErrorReporter& er)
 {
 	assert(!tokens.empty());
-	if (from <= to)
+	if (from >= to)
 	{
 		er.reportSyn(from < tokens.size() ? tokens[from] : tokens.back(), "Empty property expression.");
 		return PropertyExpression({}, from < tokens.size() ? tokens[from].lineNumber : tokens.back().lineNumber);
@@ -952,7 +952,7 @@ void parseTypeScope(Universe& universe, const SynBlock* scope, const Identifier&
 			uint32_t nxt = 1;
 			while (nxt < tokens.size())
 			{
-				if (tokens[nxt].type == LexTokenType::Identifier)
+				if (tokens[nxt].type != LexTokenType::Identifier)
 					er.reportSyn(tokens[nxt], "Expected an identifier.");
 				else
 					propertyIds.push_back(tokens[nxt]);
