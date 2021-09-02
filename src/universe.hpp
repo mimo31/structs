@@ -16,9 +16,9 @@ public:
 
 	// returns nullptr if such type doesn't exist
 	StructType* getType(const str& name) const;
+	const vec<uptr<StructType>>& getTypes() const;
 
-
-
+	void preprocess();
 private:
 	vec<uptr<StructType>> typesOwn;
 	umap<str, StructType*> types;

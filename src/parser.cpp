@@ -502,7 +502,7 @@ struct MemberDeclarator
 
 void processMemberDeclaration(Universe& universe, StructType& type, const Identifier& declaredType, const vec<MemberDeclarator>& declarators, ErrorReporter& er)
 {
-	const StructType* const memberType = universe.getType(declaredType.name);
+	StructType* const memberType = universe.getType(declaredType.name);
 	if (!memberType)
 		er.reportSem(declaredType, declaredType.name + " doesn't name a type.");
 	for (const MemberDeclarator& declarator : declarators)

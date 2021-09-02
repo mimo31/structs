@@ -12,3 +12,17 @@ StructType* Universe::getType(const str& name) const
 		return types.at(name);
 	return nullptr;
 }
+
+const vec<uptr<StructType>>& Universe::getTypes() const
+{
+	return typesOwn;
+}
+
+void Universe::preprocess()
+{
+	for (const auto& tp : typesOwn)
+	{
+		if (!tp->isPreprocessed())
+			tp->preprocess();
+	}
+}
