@@ -12,6 +12,6 @@ int main()
 
 	for (const auto& tp : universe.getTypes())
 	{
-		std::cout << tp->getName() << ": " << tp->getDeepPropertyFullCount() << " " << tp->getDeepMemberDistinctCount() << "/" << tp->getDeepMemberFullCount() << std::endl;
+		std::cout << tp->getName() << ": " << tp->getDeepPropertyDistinctCount() << "/" << tp->getDeepPropertyFullCount() << " " << tp->getDeepMemberDistinctCount() << "/" << tp->getDeepMemberFullCount() << std::endl;
 	}
 }

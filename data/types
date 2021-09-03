@@ -56,6 +56,9 @@ property
 	associative,
 	commutative;
 
+associative = magma.associative;
+commutative = magma.commutative;
+
 associative -> monoid;
 
 ~set.empty;
@@ -70,6 +73,9 @@ property
 	unital,
 	commutative;
 
+unital = magma.unital;
+commutative = magma.commutative;
+
 unital -> monoid;
 }
 
@@ -82,7 +88,11 @@ magma magma = unital_magma.magma;
 set set = magma.set;
 
 property 
-	commutative;
+	commutative,
+	trivial;
+
+trivial = set.singleton;
+commutative = magma.commutative;
 
 commutative -> commutative_monoid;
 }
@@ -114,7 +124,8 @@ property
 commutative -> commutative_group;
 
 finite = set.finite;
-trivial = set.singleton;
+trivial = monoid.trivial;
+commutative = magma.commutative;
 cyclic => commutative;
 trivial => cyclic;
 trivial => ~simple;
@@ -154,6 +165,7 @@ additive_group.set = multiplicative_monoid.set;
 set set = additive_group.set;
 
 property
+	trivial,
 	commutative,
 	left-Artinian,
 	right-Artinian,
@@ -163,6 +175,9 @@ property
 	characteristic_2,
 	finite_characteristic,
 	infinite_characteristic;
+
+trivial = additive_group.trivial;
+commutative = multiplicative_monoid.commutative;
 
 commutative -> commutative_ring;
 

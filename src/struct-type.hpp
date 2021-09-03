@@ -90,7 +90,7 @@ public:
 
 	void preprocess();
 	bool isPreprocessed() const;
-	
+
 	// TODO: add a method for processing the added equalities and relations (to be called after the analysis of the sources)
 	// (probably building some union-find; and doing that for recursively from the lowest/simplest types)
 
@@ -117,9 +117,6 @@ private:
 
 	bool preprocessed = false;
 
-	umap<DeepMemberHandle, uint32_t> groupMap;
-	vec<vec<DeepMemberHandle>> groups;
-
 	vec<vec<uint32_t>> deepMemberGroup;
 	vec<vec<pair<uint32_t, uint32_t>>> deepMemberGroups;
 	vec<StructType*> deepMemberType;
@@ -127,10 +124,18 @@ private:
 	uint32_t getDeepMemberGroup(const DeepMemberHandle& handle) const;
 	uint32_t getDeepMemberIndex(const DeepMemberHandle& handle) const;
 
-	uint32_t getDeepMemberGroup(const DeepMemberHandle& handle, const uint32_t endGroupNumber) const;
-	uint32_t getDeepMemberIndex(const DeepMemberHandle& handle, const uint32_t endGroupNumber) const;
+	uint32_t getDeepMemberGroup(const DeepMemberHandle& handle, uint32_t endGroupNumber) const;
+	uint32_t getDeepMemberIndex(const DeepMemberHandle& handle, uint32_t endGroupNumber) const;
 
 	void preprocessMemberEqualities();
+
+	vec<vec<uint32_t>> deepPropertyGroup;
+	vec<vec<pair<uint32_t, uint32_t>>> deepPropertyGroups;
+
+	uint32_t getDeepPropertyIndex(const DeepPropertyHandle& handle) const;
+	uint32_t getDeepPropertyIndex(const DeepMemberHandle& path, uint32_t propertyIndex) const;
+
+	void preprocessPropertyEqualities();
 
 	bool checkDeepPropertyValid(const DeepPropertyHandle& handle);
 };

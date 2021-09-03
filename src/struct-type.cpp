@@ -51,8 +51,7 @@ size_t StructType::getDeepPropertyFullCount() const
 
 size_t StructType::getDeepPropertyDistinctCount() const
 {
-	// TODO: implement
-	return 0;
+	return deepPropertyGroups.size();
 }
 
 MemberHandle StructType::addMember(const str& name, StructType* const type)
@@ -152,6 +151,7 @@ void StructType::preprocess()
 		if (!m.second->preprocessed)
 			m.second->preprocess();
 	preprocessMemberEqualities();
+	preprocessPropertyEqualities();
 }
 
 bool StructType::isPreprocessed() const
@@ -263,6 +263,101 @@ void StructType::preprocessMemberEqualities()
 				deepMemberGroups.push_back({});
 				deepMemberType.push_back(dm == 0 ? members[mi].second : members[mi].second->deepMemberType[dm - 1]);
 				bfs(mi, dm, bfs);
+			}
+		}
+	}
+}
+
+uint32_t StructType::getDeepPropertyIndex(const DeepPropertyHandle& handle) const
+{
+	const DeepMemberHandle& path = handle.memberPath;
+	if (path.empty())
+		return deepPropertyGroup[0][handle.pHandle - 1];
+	//const uint32_t memberIndex = getDeepMemberIndex(path);
+	DeepMemberHandle pathTail;
+	pathTail.insert(pathTail.end(), path.begin() + 1, path.end());
+	return deepPropertyGroup[path.front()][members[path.front() - 1].second->getDeepPropertyIndex({ pathTail, handle.pHandle })];
+}
+
+uint32_t StructType::getDeepPropertyIndex(const DeepMemberHandle& handle, const uint32_t propertyIndex) const
+{
+	if (handle.empty())
+		return propertyIndex;
+	//const uint32_t memberIndex = getDeepMemberIndex(handle);
+	DeepMemberHandle pathTail;
+	pathTail.insert(pathTail.end(), handle.begin() + 1, handle.end());
+	return deepPropertyGroup[handle.front()][members[handle.front() - 1].second->getDeepPropertyIndex(pathTail, propertyIndex)];
+}
+
+void StructType::preprocessPropertyEqualities()
+{
+	vec<vec<vec<pair<uint32_t, uint32_t>>>> neighbors;
+	neighbors.push_back(vec<vec<pair<uint32_t, uint32_t>>>(getPropertyCount()));
+	for (const auto& mem : members)
+		neighbors.push_back(vec<vec<pair<uint32_t, uint32_t>>>(mem.second->deepPropertyGroups.size()));
+	for (const auto& eq : propertyEqualities)
+	{
+		const auto& toIndPair = [&](const DeepPropertyHandle& handle) -> pair<uint32_t, uint32_t>
+		{
+			if (handle.memberPath.empty())
+				return { 0, handle.pHandle - 1 };
+			const uint32_t memInd = handle.memberPath.front();//getDeepMemberIndex(handle.memberPath);
+			DeepMemberHandle pathTail;
+			pathTail.insert(pathTail.end(), handle.memberPath.begin() + 1, handle.memberPath.end());
+			return { memInd, members[handle.memberPath.front() - 1].second->getDeepPropertyIndex({ pathTail, handle.pHandle }) };
+		};
+		const pair<uint32_t, uint32_t> p0 = toIndPair(eq.first);
+		const pair<uint32_t, uint32_t> p1 = toIndPair(eq.second);
+		neighbors[p0.first][p0.second].push_back(p1);
+		neighbors[p1.first][p1.second].push_back(p0);
+	}
+	for (const auto& eq : memberEqualities)
+	{
+		const StructType* eqType = getDeepMemberType(eq.first);
+		for (uint32_t pi = 0; pi < eqType->deepPropertyGroups.size(); pi++)
+		{
+			const auto& toIndPair = [&](const DeepMemberHandle& handle) -> pair<uint32_t, uint32_t>
+			{
+				DeepMemberHandle tail;
+				tail.insert(tail.end(), handle.begin() + 1, handle.end());
+				return { handle.front(), members[handle.front() - 1].second->getDeepPropertyIndex(tail, pi) };
+			};
+			const pair<uint32_t, uint32_t> p0 = toIndPair(eq.first);
+			const pair<uint32_t, uint32_t> p1 = toIndPair(eq.second);
+			neighbors[p0.first][p0.second].push_back(p1);
+			neighbors[p1.first][p1.second].push_back(p0);
+		}
+	}
+
+	deepPropertyGroup.reserve(getMemberCount() + 1);
+	constexpr uint32_t notset = std::numeric_limits<uint32_t>::max();
+	deepPropertyGroup.push_back(vec<uint32_t>(getPropertyCount(), notset));
+	for (const auto& mem : members)
+		deepPropertyGroup.push_back(vec<uint32_t>(mem.second->deepPropertyGroups.size(), notset));
+	const auto& bfs = [&](const uint32_t mi, const uint32_t pi, const auto& bfs_fun) -> void
+	{
+		deepPropertyGroups.back().push_back({ mi, pi });
+		deepPropertyGroup[mi][pi] = deepPropertyGroups.size() - 1;
+		for (const pair<uint32_t, uint32_t>& nei : neighbors[mi][pi])
+			if (deepPropertyGroup[nei.first][nei.second] == notset)
+				bfs_fun(nei.first, nei.second, bfs_fun);
+	};
+	for (uint32_t pi = 0; pi < getPropertyCount(); pi++)
+	{
+		if (deepPropertyGroup[0][pi] == notset)
+		{
+			deepPropertyGroups.push_back({});
+			bfs(0, pi, bfs);
+		}
+	}
+	for (uint32_t mim = 0; mim < getMemberCount(); mim++)
+	{
+		for (uint32_t pi = 0; pi < members[mim].second->deepPropertyGroups.size(); pi++)
+		{
+			if (deepPropertyGroup[mim + 1][pi] == notset)
+			{
+				deepPropertyGroups.push_back({});
+				bfs(mim + 1, pi, bfs);
 			}
 		}
 	}

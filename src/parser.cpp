@@ -950,6 +950,8 @@ void parseTypeScope(Universe& universe, const SynBlock* scope, const Identifier&
 		}
 		if (tokens.front().type == LexTokenType::KWProperty)
 		{
+			// TODO allow assignment inside property declaration
+
 			if (tokens.size() == 1 || tokens[1].type != LexTokenType::Identifier)
 			{
 				er.reportSyn(tokens.size() == 1 ? tokens[0] : tokens[1], "Expected an identifier.");
