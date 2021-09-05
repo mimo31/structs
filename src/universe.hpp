@@ -18,6 +18,7 @@ public:
 	StructType* getType(const str& name) const;
 	const vec<uptr<StructType>>& getTypes() const;
 
+	void precheck(ErrorReporter& er);
 	void preprocess();
 private:
 	vec<uptr<StructType>> typesOwn;

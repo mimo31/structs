@@ -18,6 +18,12 @@ const vec<uptr<StructType>>& Universe::getTypes() const
 	return typesOwn;
 }
 
+void Universe::precheck(ErrorReporter& er)
+{
+	for (const auto& tp : typesOwn)
+		tp->precheck(er);
+}
+
 void Universe::preprocess()
 {
 	for (const auto& tp : typesOwn)

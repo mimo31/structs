@@ -39,9 +39,16 @@ magma
 set set;
 
 property
+	trivial,
 	unital,
 	associative,
 	commutative;
+
+trivial = set.empty;
+trivial => ~unital & associative & commutative;
+
+set.singleton => unital & associative & commutative;
+(unital & set.two-element) => associative & commutative;
 
 unital -> unital_magma;
 associative -> semigroup;
@@ -127,9 +134,8 @@ finite = set.finite;
 trivial = monoid.trivial;
 commutative = magma.commutative;
 cyclic => commutative;
-trivial => cyclic;
-trivial => ~simple;
-trivial => commutative;
+trivial => cyclic & ~simple & commutative;
+set.two-element => cyclic & simple;
 }
 
 commutative_group

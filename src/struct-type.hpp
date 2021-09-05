@@ -1,5 +1,6 @@
 #pragma once
 
+#include "parse-utils.hpp"
 #include "str.hpp"
 #include "umap.hpp"
 #include "vec.hpp"
@@ -51,6 +52,22 @@ struct DeepProperty
 	}
 };
 
+struct FlatProperty
+{
+	uint32_t index;
+	bool negated;
+	
+	FlatProperty() = default;
+	FlatProperty(const uint32_t index, const bool negated) : index(index), negated(negated)
+	{
+	}
+
+	bool operator==(const FlatProperty other) const
+	{
+		return index == other.index && negated == other.negated;
+	}
+};
+
 typedef vec<vec<DeepProperty>> PropertyRelations;
 
 class StructType
@@ -95,7 +112,12 @@ public:
 	// (probably building some union-find; and doing that for recursively from the lowest/simplest types)
 
 	uint32_t getDeepMemberId(const DeepMemberHandle& handle) const;
-	uint32_t getDeepMemberCount() const;
+	//uint32_t getDeepMemberCount() const;
+	size_t getFlatRelationCount() const;
+
+	size_t getPossibleInstancesCount() const;
+
+	void precheck(ErrorReporter& er) const;
 
 private:
 	str name;
@@ -137,5 +159,14 @@ private:
 
 	void preprocessPropertyEqualities();
 
+	void checkPromotions(ErrorReporter& er) const;
+
+	vec<vec<FlatProperty>> flatRelations;
+
+	void preprocessChildPromotions();
+	void preprocessRelations();
+
 	bool checkDeepPropertyValid(const DeepPropertyHandle& handle);
+
+	size_t getPossibleInstancesCount(vec<bool> specified, vec<bool> values) const;
 };

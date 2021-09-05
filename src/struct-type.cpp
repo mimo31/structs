@@ -152,11 +152,46 @@ void StructType::preprocess()
 			m.second->preprocess();
 	preprocessMemberEqualities();
 	preprocessPropertyEqualities();
+	preprocessChildPromotions();
+	preprocessRelations();
+	preprocessed = true;
 }
 
 bool StructType::isPreprocessed() const
 {
 	return preprocessed;
+}
+
+size_t StructType::getFlatRelationCount() const
+{
+	return flatRelations.size();
+}
+
+size_t StructType::getPossibleInstancesCount() const
+{
+	/*
+	for (const vec<DeepProperty>& relation : relations)
+	{
+		cout << endl;
+		for (const DeepProperty& property : relation)
+		{
+			assert(property.handle.memberPath.empty());
+			cout << (property.negated ? "~" : "") << property.handle.pHandle - 1 << " ";
+		}
+	}
+	for (const vec<FlatProperty>& relation : flatRelations)
+	{
+		cout << endl;
+		for (const FlatProperty& property : relation)
+			cout << (property.negated ? "~" : "") << property.index << " ";
+	}
+	*/
+	return getPossibleInstancesCount(vec<bool>(deepPropertyGroups.size(), false), vec<bool>(deepPropertyGroups.size()));
+}
+
+void StructType::precheck(ErrorReporter& er) const
+{
+	checkPromotions(er);
 }
 
 const StructType* StructType::getDeepMemberType(const DeepMemberHandle& handle) const
@@ -363,8 +398,155 @@ void StructType::preprocessPropertyEqualities()
 	}
 }
 
+void StructType::checkPromotions(ErrorReporter& er) const
+{
+	for (const pair<PropertyHandle, const StructType*>& promotion : promotions)
+	{
+		const MemberHandle mh = promotion.second->getMember(name);
+		if (!mh)
+		{
+			er.reportProc("Type " + name + " promotes to type " + promotion.second->name + ", which does not have member with the name " + name + ".");
+			continue;
+		}
+		if (promotion.second->getMemberType(mh) != this)
+			er.reportProc("Type " + name + " promotes to type " + promotion.second->name + ", whose member " + name + " is of type " + promotion.second->getMemberType(mh)->name + " instead of " + name + ".");
+	}
+}
+
+void StructType::preprocessChildPromotions()
+{
+	for (const auto& m : members)
+	{
+		for (const pair<PropertyHandle, const StructType*>& promotion : m.second->promotions)
+		{
+			if (promotion.second == this)
+			{
+				const MemberHandle mh = getMember(m.second->name);
+				const uint32_t flatPropertyIndex = deepPropertyGroup[mh][m.second->deepPropertyGroup[0][promotion.first - 1]];
+				flatRelations.push_back({ FlatProperty(flatPropertyIndex, false) });
+			}
+		}
+	}
+}
+
+void StructType::preprocessRelations()
+{
+	for (const vec<DeepProperty>& relation : relations)
+	{
+		vec<FlatProperty> newRelation(relation.size());
+		for (uint32_t i = 0; i < relation.size(); i++)
+		{
+			newRelation[i].index = getDeepPropertyIndex(relation[i].handle);
+			newRelation[i].negated = relation[i].negated;
+		}
+		flatRelations.push_back(newRelation);
+	}
+	for (uint32_t i = 0; i < getMemberCount(); i++)
+	{
+		for (const vec<FlatProperty>& memberRelation : members[i].second->flatRelations)
+		{
+			vec<FlatProperty> substRelation(memberRelation.size());
+			for (uint32_t j = 0; j < memberRelation.size(); j++)
+			{
+				substRelation[j].index = deepPropertyGroup[i + 1][memberRelation[j].index];
+				substRelation[j].negated = memberRelation[j].negated;
+			}
+			flatRelations.push_back(substRelation);
+		}
+	}
+	if (flatRelations.empty())
+		return;
+	for (vec<FlatProperty>& relation : flatRelations)
+	{
+		sort(relation.begin(), relation.end(), [](const FlatProperty lhs, const FlatProperty rhs)
+		{
+			return lhs.index < rhs.index || (lhs.index == rhs.index && !lhs.negated && rhs.negated);
+		});
+	}
+	sort(flatRelations.begin(), flatRelations.end(), [](const vec<FlatProperty>& lhs, const vec<FlatProperty>& rhs)
+	{
+		if (lhs.size() < rhs.size())
+			return true;
+		if (lhs.size() > rhs.size())
+			return false;
+		for (uint32_t i = 0; i < lhs.size(); i++)
+		{
+			if (lhs[i].index < rhs[i].index || (lhs[i].index == rhs[i].index && !lhs[i].negated && rhs[i].negated))
+				return true;
+			if (lhs[i].index > rhs[i].index || lhs[i].negated != rhs[i].negated)
+				return false;
+		}
+		return false;
+	});
+	vec<vec<FlatProperty>> filtered;
+	filtered.push_back(flatRelations.front());
+	for (uint32_t i = 1; i < flatRelations.size(); i++)
+	{
+		if (flatRelations[i] != flatRelations[i - 1])
+			filtered.push_back(flatRelations[i]);
+	}
+	flatRelations = filtered;
+}
+
 bool StructType::checkDeepPropertyValid(const DeepPropertyHandle& handle)
 {
 	const StructType* parentType = getDeepMemberType(handle.memberPath);
 	return parentType && handle.pHandle <= parentType->properties.size();
+}
+
+size_t StructType::getPossibleInstancesCount(vec<bool> specified, vec<bool> values) const
+{
+	bool changed;
+	do
+	{
+		changed = false;
+		for (const vec<FlatProperty>& relation : flatRelations)
+		{
+			int32_t unspecInd = -1;
+			bool useless = false;
+			for (uint32_t i = 0; i < relation.size(); i++)
+			{
+				const uint32_t ind = relation[i].index;
+				if (specified[ind])
+				{
+					if (values[ind] != relation[i].negated)
+					{
+						useless = true;
+						break;
+					}
+				}
+				else
+				{
+					if (unspecInd == -1)
+						unspecInd = i;
+					else
+						unspecInd = -2;
+				}
+			}
+			if (!useless && unspecInd == -1)
+				return 0;
+			if (!useless && unspecInd != -2)
+			{
+				specified[relation[unspecInd].index] = true;\
+				values[relation[unspecInd].index] = !relation[unspecInd].negated;
+				changed = true;
+			}
+		}
+	} while (changed);
+	for (uint32_t i = 0; i < specified.size(); i++)
+	{
+		if (!specified[i])
+		{
+			specified[i] = true;
+			values[i] = false;
+			const size_t c0 = getPossibleInstancesCount(specified, values);
+			values[i] = true;
+			const size_t c1 = getPossibleInstancesCount(specified, values);
+			return c0 + c1;
+		}
+	}
+	/*cout << endl;
+	for (uint32_t i = 0; i < values.size(); i++)
+		cout << values[i] << " ";*/
+	return 1;
 }
