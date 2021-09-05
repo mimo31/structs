@@ -153,6 +153,7 @@ void StructType::preprocess()
 	preprocessMemberEqualities();
 	preprocessPropertyEqualities();
 	preprocessChildPromotions();
+	preprocessOwnPromotions();
 	preprocessRelations();
 	preprocessed = true;
 }
@@ -503,6 +504,29 @@ bool StructType::checkDeepPropertyValid(const DeepPropertyHandle& handle)
 
 size_t StructType::getPossibleInstancesCount(vec<bool> specified, vec<bool> values) const
 {
+	for (const pair<uint32_t, const StructType*> promotion : promotions)
+	{
+		if (specified[promotion.first])
+			continue;
+		vec<bool> promotedSpecified(promotion.second->deepPropertyGroups.size(), false);
+		vec<bool> promotedValues(promotion.second->deepPropertyGroups.size());
+		const uint32_t promotedMemberIndex = promotion.second->deepMemberGroup[0][promotion.second->getMember(name) - 1];
+		for (uint32_t i = 0; i < specified.size(); i++)
+		{
+			if (specified[i])
+			{
+				const uint32_t promotedIndex = promotion.second->deepPropertyGroup[promotedMemberIndex][i];
+				promotedSpecified[promotedIndex] = true;
+				promotedValues[promotedIndex] = values[i];
+			}
+		}
+		const size_t promotedTypeCount = promotion.second->getPossibleInstancesCount(promotedSpecified, promotedValues);
+		specified[promotion.first] = true;
+		values[promotion.first] = false;
+		const size_t currentTypeCount = getPossibleInstancesCount(specified, values);
+		specified[promotion.first] = false;
+		return promotedTypeCount + currentTypeCount;
+	}
 	bool changed;
 	do
 	{

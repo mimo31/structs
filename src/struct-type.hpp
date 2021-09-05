@@ -117,8 +117,6 @@ public:
 
 	size_t getPossibleInstancesCount() const;
 
-	size_t getPossibleInstancesCount(vec<bool> specified, vec<bool> values) const;
-
 	void precheck(ErrorReporter& er) const;
 
 private:
@@ -171,4 +169,6 @@ private:
 	void preprocessRelations();
 
 	bool checkDeepPropertyValid(const DeepPropertyHandle& handle);
+
+	size_t getPossibleInstancesCount(vec<bool> specified, vec<bool> values) const;
 };

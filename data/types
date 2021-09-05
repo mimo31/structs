@@ -212,9 +212,12 @@ property
 	finite_characteristic,
 	infinite_characteristic;
 
+field -> field;
+
 Artinian = ring.left-Artinian = ring.right-Artinian;
 Noetherian = ring.left-Noetherian = ring.right-Noetherian;
 field = ring.simple;
+field => Artinian;
 characteristic_2 = ring.characteristic_2;
 finite_characteristic = ring.finite_characteristic;
 infinite_characteristic = ring.infinite_characteristic;
@@ -247,7 +250,7 @@ additive_group.simple => finite;
 
 module
 {
-commutative_group addtiive_group;
+commutative_group addtive_group;
 ring ring;
 
 property
