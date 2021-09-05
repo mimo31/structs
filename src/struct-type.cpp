@@ -135,9 +135,9 @@ void StructType::addPropertyRelations(const PropertyRelations& newRelations)
 	relations.insert(relations.end(), newRelations.begin(), newRelations.end());
 }
 
-void StructType::addPromotion(const PropertyHandle propertyHandle, const StructType* const promoteTo)
+void StructType::addPromotion(const DeepPropertyHandle& propertyHandle, const StructType* const promoteTo)
 {
-	promotions.push_back({ propertyHandle, promoteTo });
+	rawPromotions.push_back({ propertyHandle, promoteTo });
 }
 
 bool StructType::isNameUsed(const str& name) const
@@ -400,7 +400,7 @@ void StructType::preprocessPropertyEqualities()
 
 void StructType::checkPromotions(ErrorReporter& er) const
 {
-	for (const pair<PropertyHandle, const StructType*>& promotion : promotions)
+	for (const pair<DeepPropertyHandle, const StructType*>& promotion : rawPromotions)
 	{
 		const MemberHandle mh = promotion.second->getMember(name);
 		if (!mh)
@@ -417,16 +417,23 @@ void StructType::preprocessChildPromotions()
 {
 	for (const auto& m : members)
 	{
-		for (const pair<PropertyHandle, const StructType*>& promotion : m.second->promotions)
+		for (const pair<DeepPropertyHandle, const StructType*>& promotion : m.second->rawPromotions)
 		{
 			if (promotion.second == this)
 			{
 				const MemberHandle mh = getMember(m.second->name);
-				const uint32_t flatPropertyIndex = deepPropertyGroup[mh][m.second->deepPropertyGroup[0][promotion.first - 1]];
+				const uint32_t flatPropertyIndex = deepPropertyGroup[mh][m.second->getDeepPropertyIndex(promotion.first)];
 				flatRelations.push_back({ FlatProperty(flatPropertyIndex, false) });
 			}
 		}
 	}
+}
+
+void StructType::preprocessOwnPromotions()
+{
+	promotions.reserve(rawPromotions.size());
+	for (const pair<DeepPropertyHandle, const StructType*> promotion : rawPromotions)
+		promotions.push_back({ getDeepPropertyIndex(promotion.first), promotion.second });
 }
 
 void StructType::preprocessRelations()

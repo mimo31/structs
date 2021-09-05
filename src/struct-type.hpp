@@ -101,7 +101,7 @@ public:
 	void addMemberEquality(const DeepMemberHandle& handle0, const DeepMemberHandle& handle1);
 	void addPropertyEquality(const DeepPropertyHandle& p0, const DeepPropertyHandle& p1);
 	void addPropertyRelations(const PropertyRelations& newRelations);
-	void addPromotion(PropertyHandle propertyHandle, const StructType* promoteTo);
+	void addPromotion(const DeepPropertyHandle& propertyHandle, const StructType* promoteTo);
 
 	bool isNameUsed(const str& name) const;
 
@@ -116,6 +116,8 @@ public:
 	size_t getFlatRelationCount() const;
 
 	size_t getPossibleInstancesCount() const;
+
+	size_t getPossibleInstancesCount(vec<bool> specified, vec<bool> values) const;
 
 	void precheck(ErrorReporter& er) const;
 
@@ -135,7 +137,8 @@ private:
 	// each relations says that the OR of the specified properties is true
 	PropertyRelations relations;
 
-	vec<pair<PropertyHandle, const StructType*>> promotions;
+	vec<pair<DeepPropertyHandle, const StructType*>> rawPromotions;
+	vec<pair<uint32_t, const StructType*>> promotions;
 
 	bool preprocessed = false;
 
@@ -164,9 +167,8 @@ private:
 	vec<vec<FlatProperty>> flatRelations;
 
 	void preprocessChildPromotions();
+	void preprocessOwnPromotions();
 	void preprocessRelations();
 
 	bool checkDeepPropertyValid(const DeepPropertyHandle& handle);
-
-	size_t getPossibleInstancesCount(vec<bool> specified, vec<bool> values) const;
 };

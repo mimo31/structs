@@ -432,16 +432,17 @@ void processPropertyDeclaration(StructType& type, const vec<Identifier>& propert
 	}
 }
 
-void processPromotion(Universe& universe, StructType& scopeType, const Identifier& propertyIdentifier, const Identifier& typeIdentifier, ErrorReporter& er)
+void processPromotion(Universe& universe, StructType& scopeType, const vec<Identifier>& propertyIdentifiers, const Identifier& typeIdentifier, ErrorReporter& er)
 {
-	const PropertyHandle property = scopeType.getProperty(propertyIdentifier.name);
-	if (!property)
-		er.reportSem(propertyIdentifier, propertyIdentifier.name + " doesn't name of property of the type " + scopeType.getName() + ".");
+	//const PropertyHandle property = scopeType.getProperty(propertyIdentifier.name);
+	const DeepPropertyHandle propertyHandle = getDeepPropertyHandle(scopeType, propertyIdentifiers, er);
+	//if (propertyHandle.empty())
+	//	er.reportSem(propertyIdentifier, propertyIdentifier.name + " doesn't name of property of the type " + scopeType.getName() + ".");
 	const StructType* const promoteTo = universe.getType(typeIdentifier.name);
 	if (!promoteTo)
 		er.reportSem(typeIdentifier, typeIdentifier.name + " doesn't name a type.");
-	if (property && promoteTo)
-		scopeType.addPromotion(property, promoteTo);
+	if (propertyHandle.pHandle && promoteTo)
+		scopeType.addPromotion(propertyHandle, promoteTo);
 }
 
 enum class PropertyExpressionOperation
@@ -681,6 +682,36 @@ void processExpressionDeclaration(StructType& scopeType, const PropertyExpressio
 	scopeType.addPropertyRelations(relations);
 }
 
+vec<Identifier> parseDirectMemberChain(const vec<LexToken>& tokens, const uint32_t from, const uint32_t to, ErrorReporter& er)
+{
+	vec<Identifier> memberIds;
+	if (tokens[from].type != LexTokenType::Identifier)
+	{
+		er.reportSyn(tokens[from], "Expected an identifier. (assuming direct member chain as property expression)");
+		return {};
+	}
+	memberIds.push_back(tokens[from]);
+	{
+		uint32_t nxt = from + 1;
+		while (nxt < to)
+		{
+			if (tokens[nxt].type != LexTokenType::Dot)
+			{
+				er.reportSyn(tokens[nxt], "Expected a dot. (assuming direct member chain as property expression)");
+				return {};
+			}
+			if (nxt + 1 == to || tokens[nxt + 1].type != LexTokenType::Identifier)
+			{
+				er.reportSyn(nxt + 1 == tokens.size() ? tokens[nxt] : tokens[nxt + 1], "Expected an identifier. (assuming direct member chain as property expression)");
+				return {};
+			}
+			memberIds.push_back(tokens[nxt + 1]);
+			nxt += 2;
+		}
+	}
+	return memberIds;
+}
+
 PropertyExpression parsePropertyExpression(const vec<LexToken>& tokens, const uint32_t from, const uint32_t to, ErrorReporter& er)
 {
 	assert(!tokens.empty());
@@ -751,32 +782,7 @@ PropertyExpression parsePropertyExpression(const vec<LexToken>& tokens, const ui
 	{
 		return parsePropertyExpression(tokens, from + 1, to - 1, er);
 	}
-	vec<Identifier> memberIds;
-	if (tokens[from].type != LexTokenType::Identifier)
-	{
-		er.reportSyn(tokens[from], "Expected an identifier. (assuming direct member chain as property expression)");
-		return PropertyExpression({}, tokens[from].lineNumber);
-	}
-	memberIds.push_back(tokens[from]);
-	{
-		uint32_t nxt = from + 1;
-		while (nxt < to)
-		{
-			if (tokens[nxt].type != LexTokenType::Dot)
-			{
-				er.reportSyn(tokens[nxt], "Expected a dot. (assuming direct member chain as property expression)");
-				return PropertyExpression({}, tokens[from].lineNumber);
-			}
-			if (nxt + 1 == to || tokens[nxt + 1].type != LexTokenType::Identifier)
-			{
-				er.reportSyn(nxt + 1 == tokens.size() ? tokens[nxt] : tokens[nxt + 1], "Expected an identifier. (assuming direct member chain as property expression)");
-				return PropertyExpression({}, tokens[from].lineNumber);
-			}
-			memberIds.push_back(tokens[nxt + 1]);
-			nxt += 2;
-		}
-	}
-	return PropertyExpression(memberIds, tokens[from].lineNumber);
+	return PropertyExpression(parseDirectMemberChain(tokens, from, to, er), tokens[from].lineNumber);
 }
 
 void parseTypeScope(Universe& universe, const SynBlock* scope, const Identifier& typeIdentifier, ErrorReporter& er)
@@ -879,19 +885,15 @@ void parseTypeScope(Universe& universe, const SynBlock* scope, const Identifier&
 			processPropertyDeclaration(*scopeType, propertyIds, er);
 			continue;
 		}
-		if (tokens.size() == 3 && tokens[1].type == LexTokenType::PromotesTo)
+		if (tokens.size() >= 3 && tokens[tokens.size() - 2].type == LexTokenType::PromotesTo)
 		{
-			if (tokens[0].type != LexTokenType::Identifier)
-			{
-				er.reportSyn(tokens[0], "Expected an identifier.");
-				continue;
-			}
+			const vec<Identifier> memberIds = parseDirectMemberChain(tokens, 0, tokens.size() - 2, er);
 			if (tokens[2].type != LexTokenType::Identifier)
 			{
 				er.reportSyn(tokens[2], "Expected an identifier.");
 				continue;
 			}
-			processPromotion(universe, *scopeType, tokens[0], tokens[2], er);
+			processPromotion(universe, *scopeType, memberIds, tokens[2], er);
 			continue;
 		}
 		const auto checkContains = [&tokens](const LexTokenType tokenType)
