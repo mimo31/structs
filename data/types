@@ -1,17 +1,32 @@
 type
 	set,
+	subset,
 	magma,
 	unital_magma,
 	semigroup,
 	monoid,
 	commutative_monoid,
 	group,
+	subgroup,
 	commutative_group,
+	subgroup_commutative,
 	ring,
+	left_ideal,
 	commutative_ring,
+	ideal,
 	field,
-	module,
-	vector_space;
+	left_module,
+	left_submodule,
+	vector_space,
+	topological_space,
+	topological_subspace,
+	metric_space,
+	normed_space,
+	inner_product_space,
+	category,
+	poset,
+	totally_ordered_set,
+	well-ordered_set;
 
 set
 {
@@ -32,6 +47,26 @@ cardinality_omega ! cardinality_2^omega;
 cardinality_omega => infinite;
 cardinality_2^omega => infinite;
 finite * infinite;
+}
+
+subset
+{
+set set, superset;
+
+property
+	entire;
+
+superset.empty => set.empty;
+superset.singleton => (set.empty | set.singleton);
+superset.two-element => (set.empty | set.singleton | set.two-element);
+superset.finite => set.finite;
+superset.cardinality_omega => (set.finite | set.cardinality_omega);
+
+entire => set == superset;
+
+superset.empty => entire;
+(superset.singleton & set.singleton) => entire;
+(superset.two-element & set.two-element) => entire;
 }
 
 magma
@@ -96,12 +131,14 @@ set set = magma.set;
 
 property 
 	commutative,
-	trivial;
+	trivial,
+	has_inverses;
 
 trivial = set.singleton;
 commutative = magma.commutative;
 
 commutative -> commutative_monoid;
+has_inverses -> group;
 }
 
 commutative_monoid
@@ -111,6 +148,11 @@ unital_magma unital_magma = monoid.unital_magma;
 semigroup semigroup = monoid.semigroup;
 magma magma = monoid.magma;
 set set = magma.set;
+
+property
+	has_inverses = monoid.has_inverses;
+
+has_inverses -> commutative_group;
 }
 
 group
@@ -126,7 +168,8 @@ property
 	commutative,
 	cyclic,
 	finite,
-	trivial;
+	trivial,
+	finitely-generated;
 
 commutative -> commutative_group;
 
@@ -136,6 +179,31 @@ commutative = magma.commutative;
 cyclic => commutative;
 trivial => cyclic & ~simple & commutative;
 set.two-element => cyclic & simple;
+}
+
+subgroup
+{
+subset subset;
+group group, supergroup;
+set set = group.set;
+
+subset.set = group.set;
+subset.superset = supergroup.set;
+
+property
+	commutative = group.commutative,
+	cyclic = group.cyclic,
+	finite = group.finite,
+	finitely-generated = group.finitely-generated,
+	normal;
+
+supergroup.commutative -> subgroup_commutative;
+
+supergroup.commutative => commutative;
+subset.entire => group == supergroup;
+supergroup.commutative => normal;
+(supergroup.simple & normal) => (group.trivial | group == supergroup);
+supergroup.cyclic => cyclic;
 }
 
 commutative_group
@@ -161,6 +229,15 @@ trivial = group.trivial;
 simple => cyclic;
 cyclic => (set.finite | set.cardinality_omega);
 finite = set.finite;
+}
+
+subgroup_commutative
+{
+subgroup subgroup;
+commutative_group commutative_group, commutative_supergroup;
+
+subgroup.group = commutative_group.group;
+subgroup.supergroup = commutative_supergroup.group;
 }
 
 ring
@@ -196,6 +273,30 @@ infinite_characteristic * finite_characteristic;
 infinite_characteristic => set.infinite;
 }
 
+left_ideal
+{
+ring ring;
+subgroup_commutative additive_subgroup;
+commutative_group additive_group = additive_subgroup.commutative_group;
+additive_subgroup.commutative_supergroup = ring.additive_group;
+
+left_submodule submodule;
+submodule.supermodule.additive_group = ring.additive_group;
+submodule.ring = ring;
+submodule.additive_subgroup = additive_subgroup
+
+property
+	finitely_generated,
+	maximal,
+	Artinian,
+	Noetherian;
+
+Noetherian => finitely_generated;
+ring.left-Noetherian => Noetherian;
+ring.left-Artinian => Artinian;
+
+}
+
 commutative_ring
 {
 ring ring;
@@ -223,6 +324,27 @@ finite_characteristic = ring.finite_characteristic;
 infinite_characteristic = ring.infinite_characteristic;
 }
 
+ideal
+{
+commutative_ring commutative_ring;
+subgroup_commutative additive_subgroup;
+commutative_group additive_group = additive_subgroup.group;
+
+property
+	finitely_generated,
+	maximal,
+	prime,
+	radical,
+	Artinian,
+	Noetherian;
+
+Noetherian => finitely_generated;
+commutative_ring.Noetherian => Noetherian;
+commutative_ring.Artinian => Artinian;
+maximal => prime;
+prime => radical;
+}
+
 field
 {
 commutative_ring commutative_ring;
@@ -235,7 +357,8 @@ property
 	characteristic_2,
 	finite_characteristic,
 	infinite_characteristic,
-	finite;
+	finite,
+	reals;
 
 characteristic_2 = commutative_ring.characteristic_2;
 finite_characteristic = commutative_ring.finite_characteristic;
@@ -246,31 +369,56 @@ finite => multiplicative_group.simple;
 finite => finite_characteristic;
 additive_group.simple = additive_group.cyclic;
 additive_group.simple => finite;
+
+reals => infinite_characteristic & set.cardinality_2^omega;
 }
 
-module
+left_module
 {
-commutative_group addtive_group;
+commutative_group additive_group;
 ring ring;
+set set = additive_group.set;
 
 property
 	Artinian,
 	Noetherian,
 	simple,
 	finitely-generated,
-	cyclic;
+	cyclic,
+	zero;
 
-simple => Artinian;
-simple => Noetherian;
-simple => cyclic;
+simple => ~zero & Artinian & Noetherian & cyclic;
 cyclic => finitely-generated;
 Noetherian => finitely-generated;
+zero => Artinian & Noetherian & ~simple & cyclic;
+}
+
+left_submodule
+{
+left_module module, supermodule;
+subgroup_commutative additive_subgroup;
+additive_subgroup.commutative_group = module.additive_group;
+additive_subgroup.commutative_supergroup = supermodule.additive_group;
+
+property
+	Artinian = module.Artinian,
+	Noetherian = module.Noetherian,
+	simple = module.simple,
+	finitely-generated = module.finitely-generated,
+	cyclic = module.cyclic,
+	maximal,
+	zero = module.zero;
+
+supermodule.simple => zero | module == supermodule;
+zero & supermodule.simple => maximal;
 }
 
 vector_space
 {
-module module;
+left_module module;
 field field;
+set set = module.set;
+
 module.ring = field.ring;
 
 property
@@ -279,4 +427,113 @@ property
 
 one-dimensional = module.simple;
 finite-dimensional = module.Artinian = module.Noetherian = module.finitely-generated;
+}
+
+topological_space
+{
+set set;
+
+property
+	Lindelof,
+	compact,
+	separable,
+	metrizable,
+	Kolmogorov, T0,
+	Hausdorff, T2,
+	second-countable;
+
+compact => Lindelof;
+metrizable => Hausdorff;
+Hausdorff => Kolmogorov;
+
+}
+
+topological_subspace
+{
+subset subset;
+topological_space topological_space, topological_superspace;
+subset.set = topological_space.set;
+subset.superset = topological_superspace.set;
+
+property
+	open,
+	closed,
+	clopen,
+	dense,
+	nowhere_dense;
+}
+
+metric_space
+{
+topological_space topological_space;
+set set = topological_space.set;
+
+property
+	compact,
+	complete;
+
+compact = topological_space.compact;
+topological_space.metrizable;
+}
+
+normed_space
+{
+vector_space vector_space;
+metric_space metric_space;
+set set = vector_space.set;
+
+vector_space.set = metric_space.set;
+
+property
+	has_inner_product;
+
+has_inner_product -> inner_product_space;
+
+vector_space.field.reals;
+}
+
+inner_product_space
+{
+normed_space normed_space;
+set set = normed_space.set;
+}
+
+category
+{
+property
+	pointed;
+}
+
+poset
+{
+set set;
+
+property
+	totally_ordered;
+
+totally_ordered -> totally_ordered_set;
+}
+
+totally_ordered_set
+{
+poset poset;
+set set = poset.set;
+
+property
+	well-ordered;
+
+well-ordered -> well-ordered_set;
+
+set.finite => well-ordered;
+}
+
+well-ordered_set
+{
+totally_ordered_set totally_ordered_set;
+set set = totally_ordered_set.set;
+
+property
+	cardinal;
+
+set.finite => cardinal;
 }
