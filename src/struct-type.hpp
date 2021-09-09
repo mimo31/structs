@@ -36,11 +36,21 @@ struct DeepPropertyHandle
 {
 	vec<MemberHandle> memberPath;
 	PropertyHandle pHandle;
+
+	DeepPropertyHandle() = default;
+	DeepPropertyHandle(const PropertyHandle pHandle) : pHandle(pHandle)
+	{
+	}
+	DeepPropertyHandle(const vec<MemberHandle>& memberPath, const PropertyHandle pHandle) : memberPath(memberPath), pHandle(pHandle)
+	{
+	}
 };
 
 struct DeepProperty
 {
 	DeepPropertyHandle handle;
+	DeepMemberHandle memberHandle0;
+	DeepMemberHandle memberHandle1;
 	bool negated;
 
 	DeepProperty() = default;
@@ -48,6 +58,9 @@ struct DeepProperty
 	{
 	}
 	DeepProperty(const DeepPropertyHandle& handle, const bool negated) : handle(handle), negated(negated)
+	{
+	}
+	DeepProperty(const DeepMemberHandle& memberHandle0, const DeepMemberHandle& memberHandle1) : handle(0), memberHandle0(memberHandle0), memberHandle1(memberHandle1)
 	{
 	}
 };

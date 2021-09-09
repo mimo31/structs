@@ -130,8 +130,15 @@ void StructType::addPropertyEquality(const DeepPropertyHandle& p0, const DeepPro
 void StructType::addPropertyRelations(const PropertyRelations& newRelations)
 {
 	for (const vec<DeepProperty>& propOr : newRelations)
+	{
 		for (const DeepProperty& prop : propOr)
-			assert(checkDeepPropertyValid(prop.handle));
+		{
+			if (prop.handle.pHandle)
+				assert(checkDeepPropertyValid(prop.handle));
+			else
+				assert(getDeepMemberType(prop.memberHandle0) && getDeepMemberType(prop.memberHandle1));
+		}
+	}
 	relations.insert(relations.end(), newRelations.begin(), newRelations.end());
 }
 
@@ -150,11 +157,21 @@ void StructType::preprocess()
 	for (const auto& m : members)
 		if (!m.second->preprocessed)
 			m.second->preprocess();
+	
+	// preprocess local and child properties & members
 	preprocessMemberEqualities();
 	preprocessPropertyEqualities();
+
+	// preprocess promotion clusters (adding properties that are not included in children (or locallly) to types)
+
+	// in relations, replace member equalities with conjuctions of property equalities (properties must already be extended by promotions by now because member equality also asserts equality of those properties)
+
+	// preprocess relations
+
 	preprocessChildPromotions();
 	preprocessOwnPromotions();
 	preprocessRelations();
+	
 	preprocessed = true;
 }
 
@@ -312,7 +329,7 @@ uint32_t StructType::getDeepPropertyIndex(const DeepPropertyHandle& handle) cons
 	//const uint32_t memberIndex = getDeepMemberIndex(path);
 	DeepMemberHandle pathTail;
 	pathTail.insert(pathTail.end(), path.begin() + 1, path.end());
-	return deepPropertyGroup[path.front()][members[path.front() - 1].second->getDeepPropertyIndex({ pathTail, handle.pHandle })];
+	return deepPropertyGroup[path.front()][members[path.front() - 1].second->getDeepPropertyIndex(DeepPropertyHandle(pathTail, handle.pHandle))];
 }
 
 uint32_t StructType::getDeepPropertyIndex(const DeepMemberHandle& handle, const uint32_t propertyIndex) const
@@ -340,7 +357,7 @@ void StructType::preprocessPropertyEqualities()
 			const uint32_t memInd = handle.memberPath.front();//getDeepMemberIndex(handle.memberPath);
 			DeepMemberHandle pathTail;
 			pathTail.insert(pathTail.end(), handle.memberPath.begin() + 1, handle.memberPath.end());
-			return { memInd, members[handle.memberPath.front() - 1].second->getDeepPropertyIndex({ pathTail, handle.pHandle }) };
+			return { memInd, members[handle.memberPath.front() - 1].second->getDeepPropertyIndex(DeepPropertyHandle(pathTail, handle.pHandle)) };
 		};
 		const pair<uint32_t, uint32_t> p0 = toIndPair(eq.first);
 		const pair<uint32_t, uint32_t> p1 = toIndPair(eq.second);

@@ -24,6 +24,7 @@ enum class LexTokenType
 	ExclusiveOr, // *
 	Or,
 	And,
+	Equivalent,
 	Dot,
 	Comma,
 	Semic,

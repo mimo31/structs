@@ -106,6 +106,8 @@ void tokenize(vec<LexToken>& tokens, istream& defs, ErrorReporter& er)
 			continue;
 		if (checkFor2CharOperator('-', '>', LexTokenType::PromotesTo))
 			continue;
+		if (checkFor2CharOperator('=', '=', LexTokenType::Equivalent))
+			continue;
 		const umap<char, LexTokenType> operators{
 			{'<', LexTokenType::LAngleBra},
 			{'>', LexTokenType::RAngleBra},
@@ -325,7 +327,7 @@ DeepPropertyHandle getDeepPropertyHandle(const StructType& type, const vec<Ident
 		if (!mHandle)
 		{
 			er.reportSem(identifiers[i], identifiers[i].name + " is not a member of type " + nextType->getName() + ".");
-			return {{}, 0};
+			return DeepPropertyHandle(0);
 		}
 		handle.memberPath.push_back(mHandle);
 		nextType = nextType->getMemberType(mHandle);
@@ -334,7 +336,7 @@ DeepPropertyHandle getDeepPropertyHandle(const StructType& type, const vec<Ident
 	if (!handle.pHandle)
 	{
 		er.reportSem(identifiers.back(), identifiers.back().name + " is not a property of type " + nextType->getName() + ".");
-		return {{}, 0};
+		return DeepPropertyHandle(0);
 	}
 	return handle;
 }
@@ -423,12 +425,36 @@ void processMemberDeclaration(Universe& universe, StructType& type, const Identi
 	}
 }
 
-void processPropertyDeclaration(StructType& type, const vec<Identifier>& propertyNames, ErrorReporter& er)
+struct PropertyDeclarator
 {
-	for (const Identifier& propertyNameId : propertyNames)
+	Identifier propertyId;
+	vec<Identifier> definition;
+
+	PropertyDeclarator(const Identifier& propertyId) : propertyId(propertyId)
 	{
-		if (!checkIsNameUsed(type, propertyNameId, er))
-			type.addProperty(propertyNameId.name);
+	}
+	PropertyDeclarator(const Identifier& propertyId, const vec<Identifier>& definition)
+		: propertyId(propertyId),
+		definition(definition)
+	{
+	}
+};
+
+void processPropertyDeclaration(StructType& type, const vec<PropertyDeclarator>& declarators, ErrorReporter& er)
+{
+	for (const PropertyDeclarator& declarator : declarators)
+	{
+		if (checkIsNameUsed(type, declarator.propertyId, er))
+			continue;
+		const PropertyHandle newHandle = type.addProperty(declarator.propertyId.name);
+		if (!declarator.definition.empty())
+		{
+			const DeepPropertyHandle assignHandle = getDeepPropertyHandle(type, declarator.definition, er);
+			if (assignHandle.memberPath.empty() && assignHandle.pHandle == newHandle)
+				er.reportSyn(declarator.definition.front(), "Property can't be assign-declared to itself.");
+			else
+				type.addPropertyEquality(DeepPropertyHandle(newHandle), assignHandle);
+		}
 	}
 }
 
@@ -447,7 +473,7 @@ void processPromotion(Universe& universe, StructType& scopeType, const vec<Ident
 
 enum class PropertyExpressionOperation
 {
-	None, And, Or, Negate
+	None, And, Or, Negate, Equivalence
 };
 
 struct PropertyExpression
@@ -525,6 +551,18 @@ PropertyRelations relationsNegate(const PropertyRelations& relations)
 	return negatedRelations;
 }
 
+PropertyRelations relationsEquivalence(const vec<PropertyRelations>& relations)
+{
+	PropertyRelations positiveAnd;
+	PropertyRelations negativeAnd;
+	for (const PropertyRelations& partial : relations)
+	{
+		positiveAnd = relationsAnd(positiveAnd, partial);
+		negativeAnd = relationsAnd(negativeAnd, relationsNegate(partial));
+	}
+	return relationsOr(positiveAnd, negativeAnd);
+}
+
 PropertyRelations relationsExclusivity(const vec<PropertyRelations>& relations)
 {
 	if (relations.size() <= 1)
@@ -581,6 +619,39 @@ PropertyRelations propertyExpressionToRelations(StructType& scopeType, const Pro
 			relations = relationsOr(relations, subrelations);
 		}
 		return relations;
+	}
+	if (expression.operation == PropertyExpressionOperation::Equivalence)
+	{
+		bool memberEquivalence = false;
+		if (expression.operands[0].operation == PropertyExpressionOperation::None)
+		{
+			DeepMemberHandle memberHandle;
+			DeepPropertyHandle propertyHandle;
+			getDeepMemberOrPropertyHandle(scopeType, expression.operands[0].memberSequence, memberHandle, propertyHandle, er);
+			if (memberHandle.empty() && !propertyHandle.pHandle)
+				return {};
+			if (!memberHandle.empty())
+				memberEquivalence = true;
+		}
+		if (memberEquivalence)
+		{
+			const DeepMemberHandle handle0 = getDeepMemberHandle(scopeType, expression.operands[0].memberSequence, er);
+			PropertyRelations relations;
+			for (uint32_t i = 1; i < expression.operands.size(); i++)
+			{
+				const DeepMemberHandle currentHandle = getDeepMemberHandle(scopeType, expression.operands[i].memberSequence, er);
+				relations.push_back({ DeepProperty(handle0, currentHandle) });
+			}
+			return relations;
+		}
+		else
+		{
+			vec<PropertyRelations> subrelations;
+			subrelations.reserve(expression.operands.size());
+			for (const PropertyExpression& expr : expression.operands)
+				subrelations.push_back(propertyExpressionToRelations(scopeType, expr, er));
+			return relationsEquivalence(subrelations);
+		}
 	}
 	if (expression.operation == PropertyExpressionOperation::Negate)
 	{
@@ -722,6 +793,7 @@ PropertyExpression parsePropertyExpression(const vec<LexToken>& tokens, const ui
 	}
 	bool hasOr = false;
 	bool hasAnd = false;
+	bool hasEquivalence = false;
 	{
 	int32_t openParens = 0;
 	for (uint32_t i = from; i < to; i++)
@@ -734,6 +806,8 @@ PropertyExpression parsePropertyExpression(const vec<LexToken>& tokens, const ui
 			hasOr = true;
 		else if (openParens == 0 && tokens[i].type == LexTokenType::And)
 			hasAnd = true;
+		else if (openParens == 0 && tokens[i].type == LexTokenType::Equivalent)
+			hasEquivalence = true;
 		if (openParens < 0)
 		{
 			er.reportSyn(tokens[i], "Closing parenthesis not matched by an opening parenthesis.");
@@ -773,6 +847,10 @@ PropertyExpression parsePropertyExpression(const vec<LexToken>& tokens, const ui
 	else if (hasAnd)
 	{
 		return parseAndOr(LexTokenType::And, PropertyExpressionOperation::And);
+	}
+	else if (hasEquivalence)
+	{
+		return parseAndOr(LexTokenType::Equivalent, PropertyExpressionOperation::Equivalence);
 	}
 	else if (tokens[from].type == LexTokenType::Negate)
 	{
@@ -861,28 +939,57 @@ void parseTypeScope(Universe& universe, const SynBlock* scope, const Identifier&
 		}
 		if (tokens.front().type == LexTokenType::KWProperty)
 		{
-			// TODO allow assignment inside property declaration
-
-			if (tokens.size() == 1 || tokens[1].type != LexTokenType::Identifier)
-			{
-				er.reportSyn(tokens.size() == 1 ? tokens[0] : tokens[1], "Expected an identifier.");
-				continue;
-			}
-			vec<Identifier> propertyIds;
+			vec<PropertyDeclarator> declarators;
 			uint32_t nxt = 1;
 			while (nxt < tokens.size())
 			{
 				if (tokens[nxt].type != LexTokenType::Identifier)
-					er.reportSyn(tokens[nxt], "Expected an identifier.");
-				else
-					propertyIds.push_back(tokens[nxt]);
-				if (nxt + 1 == tokens.size())
+				{
+					er.reportSyn(tokens[nxt], "Expected an identifier for member name.");
 					break;
-				if (tokens[nxt + 1].type != LexTokenType::Comma)
-					er.reportSyn(tokens[nxt + 1], "Expected a comma.");
-				nxt += 2;
+				}
+				const Identifier& memberId = tokens[nxt];
+				if (nxt + 1 == tokens.size() || tokens[nxt + 1].type == LexTokenType::Comma)
+				{
+					declarators.push_back(PropertyDeclarator(memberId));
+					nxt += 2;
+					continue;
+				}
+				if (tokens[nxt + 1].type != LexTokenType::Equals)
+				{
+					er.reportSyn(tokens[nxt + 1], "Expected a comma or an equal sign.");
+					break;
+				}
+				if (nxt + 2 == tokens.size() || tokens[nxt + 2].type != LexTokenType::Identifier)
+				{
+					er.reportSyn(nxt + 2 == tokens.size() ? tokens[nxt + 1] : tokens[nxt + 2], "Expected an identifier.");
+					break;
+				}
+				vec<Identifier> definitionIds = { tokens[nxt + 2] };
+				nxt += 3;
+				bool error = false;
+				while (nxt < tokens.size() && tokens[nxt].type != LexTokenType::Comma)
+				{
+					if (tokens[nxt].type != LexTokenType::Dot)
+					{
+						er.reportSyn(tokens[nxt], "Expected a dot.");
+						error = true;
+						break;
+					}
+					if (nxt + 1 == tokens.size() || tokens[nxt + 1].type != LexTokenType::Identifier)
+					{
+						er.reportSyn(nxt + 1 == tokens.size() ? tokens[nxt] : tokens[nxt + 1], "Expected an identifier.");
+						error = true;
+						break;
+					}
+					definitionIds.push_back(tokens[nxt + 1]);
+					nxt += 2;
+				}
+				nxt++;
+				if (!error)
+					declarators.push_back(PropertyDeclarator(memberId, definitionIds));
 			}
-			processPropertyDeclaration(*scopeType, propertyIds, er);
+			processPropertyDeclaration(*scopeType, declarators, er);
 			continue;
 		}
 		if (tokens.size() >= 3 && tokens[tokens.size() - 2].type == LexTokenType::PromotesTo)
