@@ -273,6 +273,48 @@ infinite_characteristic * finite_characteristic;
 infinite_characteristic => set.infinite;
 }
 
+left_module
+{
+commutative_group additive_group;
+ring ring;
+set set = additive_group.set;
+
+property
+	Artinian,
+	Noetherian,
+	simple,
+	finitely-generated,
+	cyclic,
+	zero;
+
+simple => ~zero & Artinian & Noetherian & cyclic;
+cyclic => finitely-generated;
+Noetherian => finitely-generated;
+zero => Artinian & Noetherian & ~simple & cyclic;
+}
+
+left_submodule
+{
+left_module module, supermodule;
+ring ring = module.ring;
+ring = supermodule.ring;
+subgroup_commutative additive_subgroup;
+additive_subgroup.commutative_group = module.additive_group;
+additive_subgroup.commutative_supergroup = supermodule.additive_group;
+
+property
+	Artinian = module.Artinian,
+	Noetherian = module.Noetherian,
+	simple = module.simple,
+	finitely-generated = module.finitely-generated,
+	cyclic = module.cyclic,
+	maximal,
+	zero = module.zero;
+
+supermodule.simple => zero | module == supermodule;
+zero & supermodule.simple => maximal;
+}
+
 left_ideal
 {
 ring ring;
@@ -283,7 +325,7 @@ additive_subgroup.commutative_supergroup = ring.additive_group;
 left_submodule submodule;
 submodule.supermodule.additive_group = ring.additive_group;
 submodule.ring = ring;
-submodule.additive_subgroup = additive_subgroup
+submodule.additive_subgroup = additive_subgroup;
 
 property
 	finitely_generated,
@@ -296,6 +338,7 @@ ring.left-Noetherian => Noetherian;
 ring.left-Artinian => Artinian;
 
 }
+
 
 commutative_ring
 {
@@ -328,7 +371,7 @@ ideal
 {
 commutative_ring commutative_ring;
 subgroup_commutative additive_subgroup;
-commutative_group additive_group = additive_subgroup.group;
+commutative_group additive_group = additive_subgroup.commutative_group;
 
 property
 	finitely_generated,
@@ -371,46 +414,6 @@ additive_group.simple = additive_group.cyclic;
 additive_group.simple => finite;
 
 reals => infinite_characteristic & set.cardinality_2^omega;
-}
-
-left_module
-{
-commutative_group additive_group;
-ring ring;
-set set = additive_group.set;
-
-property
-	Artinian,
-	Noetherian,
-	simple,
-	finitely-generated,
-	cyclic,
-	zero;
-
-simple => ~zero & Artinian & Noetherian & cyclic;
-cyclic => finitely-generated;
-Noetherian => finitely-generated;
-zero => Artinian & Noetherian & ~simple & cyclic;
-}
-
-left_submodule
-{
-left_module module, supermodule;
-subgroup_commutative additive_subgroup;
-additive_subgroup.commutative_group = module.additive_group;
-additive_subgroup.commutative_supergroup = supermodule.additive_group;
-
-property
-	Artinian = module.Artinian,
-	Noetherian = module.Noetherian,
-	simple = module.simple,
-	finitely-generated = module.finitely-generated,
-	cyclic = module.cyclic,
-	maximal,
-	zero = module.zero;
-
-supermodule.simple => zero | module == supermodule;
-zero & supermodule.simple => maximal;
 }
 
 vector_space

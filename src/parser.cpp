@@ -995,12 +995,12 @@ void parseTypeScope(Universe& universe, const SynBlock* scope, const Identifier&
 		if (tokens.size() >= 3 && tokens[tokens.size() - 2].type == LexTokenType::PromotesTo)
 		{
 			const vec<Identifier> memberIds = parseDirectMemberChain(tokens, 0, tokens.size() - 2, er);
-			if (tokens[2].type != LexTokenType::Identifier)
+			if (tokens.back().type != LexTokenType::Identifier)
 			{
-				er.reportSyn(tokens[2], "Expected an identifier.");
+				er.reportSyn(tokens.back(), "Expected an identifier.");
 				continue;
 			}
-			processPromotion(universe, *scopeType, memberIds, tokens[2], er);
+			processPromotion(universe, *scopeType, memberIds, tokens.back(), er);
 			continue;
 		}
 		const auto checkContains = [&tokens](const LexTokenType tokenType)
